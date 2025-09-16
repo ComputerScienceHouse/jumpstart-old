@@ -36,6 +36,7 @@ docker run \
     -e JUMPSTART_API_KEYS=KEYS \
     -e TZ=America/New_York \
     -e SENTRY_DSN=LINK \
+    -e GUNICORN_CMD_ARGS="-b=0.0.0.0:5000" \
     -v ./secrets:/usr/local/jumpstart/secrets \
     -p 5000:5000 \
     jumpstart

@@ -14,4 +14,4 @@ RUN mkdir -p /usr/local/var
 RUN chown jumpstart:jumpstart /usr/local/var
 USER jumpstart
 
-CMD ["flask", "--app", "jumpstart", "run"]
+CMD ["gunicorn", "jumpstart:app"]
