@@ -39,34 +39,41 @@ sentry_sdk.init(
     integrations = [FlaskIntegration()]
 )
 
-App = Flask(__name__)
+app = Flask(__name__)
 
 auth = HTTPTokenAuth(scheme='Token')
 api_keys = os.environ.get('JUMPSTART_API_KEYS')
 
 tokens = api_keys.split(',') if api_keys else []
-App.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-App.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
-db = SQLAlchemy(App)
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+
+db = SQLAlchemy(app)
 
 from jumpstart.models import File, Ann
 
 if not os.path.exists(os.path.join(os.getcwd(), "site.db")):
-    db.create_all()
+    with app.app_context():
+        db.create_all()
 
-# Initializes the database for Files
-file = File(title="Jumpstart.exe")
-db.session.query(File).delete()
-db.session.commit()
-db.session.add(file)
-db.session.commit()
+# Prepare database
+# geese: If the database is cleared every boot, 
+# why can't it just be a damn variable?
+with app.app_context():
+    # Initializes the database for Files
+    file = File(title="Jumpstart.exe")
+    db.session.query(File).delete()
+    db.session.commit()
+    db.session.add(file)
+    db.session.commit()
 
-# Initializes the database for Announcements
-ann = Ann(title="Have a great day!")
-db.session.query(Ann).delete()
-db.session.commit()
-db.session.add(ann)
-db.session.commit()
+    # Initializes the database for Announcements
+    ann = Ann(title="Have a great day!")
+    db.session.query(Ann).delete()
+    db.session.commit()
+    db.session.add(ann)
+    db.session.commit()
 
 @auth.verify_token
 def verify_token(token):
@@ -77,8 +84,8 @@ def verify_token(token):
 
 
 limiter = Limiter(
-    App,
-    key_func=get_remote_address,
+    get_remote_address,
+    app=app,
     default_limits=["13 per minute", "1 per second"],
 )
 
@@ -86,11 +93,12 @@ limiter = Limiter(
 def ip_whitelist():
     return request.remote_addr == "127.0.0.1"
 
-@App.route('/')
+
+@app.route('/')
 def index():
     return render_template('index.html')
 
-@App.route('/calendar', methods=['GET'])
+@app.route('/calendar', methods=['GET'])
 @limiter.limit("3/minute")
 @limiter.limit("1/second")
 def calendar():
@@ -136,7 +144,7 @@ def calendar():
     event_list = {'data': final_events}
     return jsonify(event_list)
 
-@App.route('/get-announcement', methods=['GET'])
+@app.route('/get-announcement', methods=['GET'])
 @limiter.limit("13/minute")
 @limiter.limit("1/second")
 def get_announcement():
@@ -144,7 +152,7 @@ def get_announcement():
     announcement_post = {'data' : str(ann)}
     return jsonify(announcement_post)
 
-@App.route("/update-announcement", methods=["POST"])
+@app.route("/update-announcement", methods=["POST"])
 @auth.login_required
 @limiter.limit("3/hour")
 @limiter.limit("2/minute")
@@ -157,7 +165,7 @@ def update_announcement():
     db.session.commit()
     return "Announcement Updated"
 
-@App.route('/get-harold', methods=['GET'])
+@app.route('/get-harold', methods=['GET'])
 @limiter.limit("13/minute")
 @limiter.limit("1/second")
 def get_harold():
@@ -165,7 +173,7 @@ def get_harold():
     filename = {'data': str(file)}
     return jsonify(filename)
 
-@App.route("/update-harold", methods=["POST"])
+@app.route("/update-harold", methods=["POST"])
 @auth.login_required
 def update_harold():
     req_data = request.get_json()
@@ -178,7 +186,7 @@ def update_harold():
 if __name__ == '__main__':
     App.run(debug=True)
 
-@App.route('/showerthoughts', methods=['GET'])
+@app.route('/showerthoughts', methods=['GET'])
 @limiter.limit("3/minute")
 @limiter.limit("1/second")
 def showerthoughts():
