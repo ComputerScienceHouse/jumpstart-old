@@ -75,7 +75,7 @@ with app.app_context():
     db.session.commit()
 
 @auth.verify_token
-def verify_token(api_key):
+def verify_token(token):
     if token == api_key:
         print("VERIFIED!!!")
         return True
