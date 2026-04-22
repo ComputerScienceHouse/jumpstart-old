@@ -1,3 +1,5 @@
+# This is old, new one is at [ComputerScienceHouse/jumpstart](https://github.com/ComputerScienceHouse/jumpstart)
+
 # Jumpstart
 
 A graphical interface that displays important information at the entrance of CSH.
